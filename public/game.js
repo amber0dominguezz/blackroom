@@ -280,24 +280,30 @@ function render() {
     const visibleBlocks = getVisibleBlocks();
     const blockSize = gameState.blockSize;
     
-    // Draw visible blocks
+    // Draw ALL walls first (always visible)
+    gameState.walls.forEach(wallKey => {
+        const [x, y] = wallKey.split(',').map(Number);
+        ctx.fillStyle = '#444';
+        ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+        ctx.strokeStyle = '#666';
+        ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
+        // Add a subtle pattern to walls
+        ctx.fillStyle = '#555';
+        ctx.fillRect(x * blockSize + 2, y * blockSize + 2, blockSize - 4, blockSize - 4);
+    });
+    
+    // Draw visible floor blocks (only where flashlight reveals)
     visibleBlocks.forEach(blockKey => {
+        // Skip if this is a wall (already drawn)
+        if (gameState.walls.has(blockKey)) {
+            return;
+        }
+        
         const [x, y] = blockKey.split(',').map(Number);
         ctx.fillStyle = '#1a1a1a';
         ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
         ctx.strokeStyle = '#333';
         ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
-        
-        // Draw walls if visible
-        if (gameState.walls.has(blockKey)) {
-            ctx.fillStyle = '#444';
-            ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
-            ctx.strokeStyle = '#666';
-            ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
-            // Add a subtle pattern to walls
-            ctx.fillStyle = '#555';
-            ctx.fillRect(x * blockSize + 2, y * blockSize + 2, blockSize - 4, blockSize - 4);
-        }
     });
     
     // Draw other players (only if visible)
