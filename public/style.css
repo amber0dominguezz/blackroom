@@ -163,3 +163,48 @@ body {
     color: #fff;
 }
 
+#revealCountdown {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #ffff00;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    min-width: 200px;
+}
+
+#revealCountdown.revealing {
+    border-color: #00ff00;
+    background: rgba(0, 255, 0, 0.2);
+}
+
+#revealText {
+    color: #ffff00;
+    font-size: 1em;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+#revealCountdown.revealing #revealText {
+    color: #00ff00;
+    font-size: 1.2em;
+    text-shadow: 0 0 10px #00ff00;
+}
+
+#revealTimer {
+    color: #ffff00;
+    font-size: 3em;
+    font-weight: bold;
+    text-shadow: 0 0 20px #ffff00;
+    font-family: 'Courier New', monospace;
+}
+
+#revealCountdown.revealing #revealTimer {
+    color: #00ff00;
+    text-shadow: 0 0 20px #00ff00;
+}
+

@@ -124,6 +124,25 @@ function getRandomWallPosition() {
 // Initialize walls when server starts
 generateWalls();
 
+// Set up periodic player reveal (every 7 seconds, reveal for 1 second)
+const REVEAL_INTERVAL = 7000; // 7 seconds
+const REVEAL_DURATION = 1000; // 1 second
+
+// Start the reveal cycle
+setInterval(() => {
+  // Broadcast reveal start to all clients
+  const allPlayers = Array.from(players.values())
+    .filter(p => p.alive)
+    .map(p => ({ id: p.id, x: p.x, y: p.y, avatar: p.avatar }));
+  
+  io.emit('revealStart', { players: allPlayers });
+  
+  // After 1 second, broadcast reveal end
+  setTimeout(() => {
+    io.emit('revealEnd');
+  }, REVEAL_DURATION);
+}, REVEAL_INTERVAL);
+
 // Check if player can catch another player (catcher must be facing target)
 function canCatch(catcher, target) {
   const dx = target.x - catcher.x;

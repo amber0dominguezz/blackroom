@@ -11,7 +11,9 @@ let gameState = {
     walls: new Set(), // Store walls as Set of "x,y" strings
     alive: true,
     direction: 'down', // Track facing direction for flashlight
-    kills: 0 // Track kill count
+    kills: 0, // Track kill count
+    isRevealing: false, // Track if players are currently revealed
+    revealCountdown: 7 // Countdown timer for reveal
 };
 
 const canvas = document.getElementById('gameCanvas');
@@ -24,6 +26,9 @@ const startButton = document.getElementById('startGame');
 const statusDiv = document.getElementById('status');
 const playerCountDiv = document.getElementById('playerCount');
 const killsDiv = document.getElementById('kills');
+const revealCountdownDiv = document.getElementById('revealCountdown');
+const revealTextDiv = document.getElementById('revealText');
+const revealTimerDiv = document.getElementById('revealTimer');
 
 const avatars = ['👤', '👻', '🧟', '🦇', '🐺', '🕷️', '💀', '👹'];
 const FLASHLIGHT_RANGE = 2;
@@ -50,6 +55,7 @@ startButton.addEventListener('click', () => {
     socket.emit('join', gameState.selectedAvatar);
     setupCanvas();
     startGameLoop();
+    startRevealCountdown();
 });
 
 // Setup canvas
@@ -159,6 +165,50 @@ socket.on('playerKilled', (data) => {
     if (gameState.players.has(data.killerId)) {
         gameState.players.get(data.killerId).kills = data.kills;
     }
+});
+
+// Handle reveal events
+socket.on('revealStart', (data) => {
+    gameState.isRevealing = true;
+    // Update player positions from reveal data
+    if (data.players) {
+        data.players.forEach(player => {
+            if (player.id !== gameState.myId && gameState.players.has(player.id)) {
+                gameState.players.get(player.id).x = player.x;
+                gameState.players.get(player.id).y = player.y;
+            }
+        });
+    }
+    revealCountdownDiv.classList.add('revealing');
+    revealTextDiv.textContent = 'Players revealed!';
+    revealTimerDiv.textContent = '';
+});
+
+socket.on('revealEnd', () => {
+    gameState.isRevealing = false;
+    revealCountdownDiv.classList.remove('revealing');
+    revealTextDiv.textContent = 'Revealing players position in';
+    // Reset countdown to 7 (next reveal in 7 seconds)
+    gameState.revealCountdown = 7;
+    revealTimerDiv.textContent = gameState.revealCountdown;
+    
+    // Restart countdown
+    if (revealCountdownInterval) {
+        clearInterval(revealCountdownInterval);
+    }
+    revealCountdownInterval = setInterval(() => {
+        if (gameState.isRevealing) {
+            return; // Don't countdown during reveal
+        }
+        
+        gameState.revealCountdown--;
+        revealTimerDiv.textContent = gameState.revealCountdown;
+        
+        if (gameState.revealCountdown <= 0) {
+            clearInterval(revealCountdownInterval);
+            revealCountdownInterval = null;
+        }
+    }, 1000);
 });
 
 // Movement
@@ -292,8 +342,26 @@ function render() {
         ctx.fillRect(x * blockSize + 2, y * blockSize + 2, blockSize - 4, blockSize - 4);
     });
     
-    // Draw visible floor blocks (only where flashlight reveals)
-    visibleBlocks.forEach(blockKey => {
+    // Draw visible floor blocks (where flashlight reveals OR around revealed players)
+    const blocksToDraw = new Set(visibleBlocks);
+    
+    // If revealing, add floor blocks around all players
+    if (gameState.isRevealing) {
+        gameState.players.forEach((player, id) => {
+            // Add a 2x2 area around each player
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    const x = player.x + dx;
+                    const y = player.y + dy;
+                    if (x >= 0 && x < gameState.roomSize && y >= 0 && y < gameState.roomSize) {
+                        blocksToDraw.add(`${x},${y}`);
+                    }
+                }
+            }
+        });
+    }
+    
+    blocksToDraw.forEach(blockKey => {
         // Skip if this is a wall (already drawn)
         if (gameState.walls.has(blockKey)) {
             return;
@@ -306,19 +374,29 @@ function render() {
         ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
     });
     
-    // Draw other players (only if visible)
+    // Draw other players (visible if in flashlight range OR if revealing)
     gameState.players.forEach((player, id) => {
         if (id === gameState.myId) return;
         const blockKey = `${player.x},${player.y}`;
-        if (visibleBlocks.has(blockKey)) {
+        const isVisible = visibleBlocks.has(blockKey) || gameState.isRevealing;
+        
+        if (isVisible) {
             ctx.font = `${blockSize}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            // Make revealed players slightly brighter/glowing
+            if (gameState.isRevealing) {
+                ctx.shadowColor = '#ffff00';
+                ctx.shadowBlur = 10;
+            } else {
+                ctx.shadowBlur = 0;
+            }
             ctx.fillText(
                 player.avatar,
                 player.x * blockSize + blockSize / 2,
                 player.y * blockSize + blockSize / 2
             );
+            ctx.shadowBlur = 0; // Reset shadow
         }
     });
     
@@ -341,6 +419,38 @@ function updatePlayerCount() {
 
 // Initialize kills display
 killsDiv.textContent = `Kills: ${gameState.kills}`;
+
+// Reveal countdown timer
+let revealCountdownInterval = null;
+
+function startRevealCountdown() {
+    // Clear any existing interval
+    if (revealCountdownInterval) {
+        clearInterval(revealCountdownInterval);
+    }
+    
+    // Show countdown
+    revealCountdownDiv.classList.remove('hidden');
+    revealTextDiv.textContent = 'Revealing players position in';
+    
+    // Update countdown every second
+    revealCountdownInterval = setInterval(() => {
+        if (gameState.isRevealing) {
+            return; // Don't countdown during reveal
+        }
+        
+        gameState.revealCountdown--;
+        revealTimerDiv.textContent = gameState.revealCountdown;
+        
+        if (gameState.revealCountdown <= 0) {
+            clearInterval(revealCountdownInterval);
+            revealCountdownInterval = null;
+        }
+    }, 1000);
+    
+    // Initial display
+    revealTimerDiv.textContent = gameState.revealCountdown;
+}
 
 function gameLoop() {
     render();
