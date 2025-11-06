@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Black Room</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="avatarSelection" class="screen">
+        <h1>Black Room</h1>
+        <p>Choose your avatar:</p>
+        <div id="avatarGrid"></div>
+        <button id="startGame" disabled>Start Game</button>
+    </div>
+    
+    <div id="gameScreen" class="screen hidden">
+        <div id="gameInfo">
+            <div id="status">Alive</div>
+            <div id="playerCount">Players: 1</div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="controls">
+            <p>WASD or Arrow Keys: Change facing direction</p>
+            <p>M: Move one block forward</p>
+            <p>Your flashlight reveals 2 blocks ahead</p>
+        </div>
+    </div>
+    
+    <div id="deathScreen" class="screen hidden">
+        <h1>You Died!</h1>
+        <p>Respawning in 2 seconds...</p>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
+
