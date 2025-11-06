@@ -120,6 +120,15 @@ body {
 #kills {
     color: #ffaa00;
     font-weight: bold;
+    font-size: 1.3em;
+    text-shadow: 0 0 10px #ffaa00;
+    background: rgba(255, 170, 0, 0.1);
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 2px solid #ffaa00;
+    display: inline-block;
+    margin-top: 5px;
+    transition: transform 0.3s, color 0.3s;
 }
 
 #gameCanvas {

@@ -228,26 +228,33 @@ io.on('connection', (socket) => {
       player.y = newY;
       
       // Check for catches - only the moving player can catch others
+      // IMPORTANT: Only check if THIS moving player can catch others
+      // The moving player NEVER dies from their own catch action
+      if (!player.alive) {
+        return; // Dead players can't catch
+      }
+      
       const otherPlayers = Array.from(players.values())
         .filter(p => p.id !== socket.id && p.alive);
       
       for (const otherPlayer of otherPlayers) {
         // Only check if the moving player can catch the other player
         // The moving player is the one using their flashlight
-        if (canCatch(player, otherPlayer)) {
-          // Only the caught player dies
+        // CRITICAL: Only the caught player (otherPlayer) dies, NOT the moving player
+        if (canCatch(player, otherPlayer) && otherPlayer.alive) {
+          // ONLY the caught player dies - the moving player (catcher) stays alive
           otherPlayer.alive = false;
           
-          // Increment kill count for the catcher
+          // Increment kill count for the catcher (the moving player)
           player.kills++;
           
-          // Notify the catcher
+          // Notify the catcher (moving player) - they caught someone
           socket.emit('caught', { 
             playerId: otherPlayer.id, 
             kills: player.kills 
           });
           
-          // Notify the caught player
+          // Notify the caught player - they died
           io.to(otherPlayer.id).emit('died');
           
           // Broadcast kill update to all players

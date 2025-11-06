@@ -68,6 +68,8 @@ socket.on('init', (data) => {
     gameState.myY = data.y;
     gameState.myAvatar = data.avatar;
     gameState.roomSize = data.roomSize;
+    gameState.kills = 0; // Initialize kills
+    killsDiv.textContent = `Kills: ${gameState.kills}`;
     // Store walls from server
     if (data.walls) {
         gameState.walls = new Set(data.walls);
@@ -119,6 +121,15 @@ socket.on('caught', (data) => {
     // You caught someone
     gameState.kills = data.kills || 0;
     killsDiv.textContent = `Kills: ${gameState.kills}`;
+    
+    // Visual feedback - animate the kill counter
+    killsDiv.style.transform = 'scale(1.3)';
+    killsDiv.style.color = '#ff0000';
+    setTimeout(() => {
+        killsDiv.style.transform = 'scale(1)';
+        killsDiv.style.color = '#ffaa00';
+    }, 300);
+    
     statusDiv.textContent = `You caught someone! (${gameState.kills} kills)`;
     setTimeout(() => {
         if (gameState.alive) {
