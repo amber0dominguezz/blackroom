@@ -114,6 +114,12 @@ body {
 
 #playerCount {
     color: #888;
+    margin-bottom: 10px;
+}
+
+#kills {
+    color: #ffaa00;
+    font-weight: bold;
 }
 
 #gameCanvas {

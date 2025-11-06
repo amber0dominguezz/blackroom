@@ -8,8 +8,10 @@ let gameState = {
     roomSize: 30,
     blockSize: 20,
     players: new Map(),
+    walls: new Set(), // Store walls as Set of "x,y" strings
     alive: true,
-    direction: 'down' // Track facing direction for flashlight
+    direction: 'down', // Track facing direction for flashlight
+    kills: 0 // Track kill count
 };
 
 const canvas = document.getElementById('gameCanvas');
@@ -21,6 +23,7 @@ const avatarGrid = document.getElementById('avatarGrid');
 const startButton = document.getElementById('startGame');
 const statusDiv = document.getElementById('status');
 const playerCountDiv = document.getElementById('playerCount');
+const killsDiv = document.getElementById('kills');
 
 const avatars = ['👤', '👻', '🧟', '🦇', '🐺', '🕷️', '💀', '👹'];
 const FLASHLIGHT_RANGE = 2;
@@ -65,6 +68,10 @@ socket.on('init', (data) => {
     gameState.myY = data.y;
     gameState.myAvatar = data.avatar;
     gameState.roomSize = data.roomSize;
+    // Store walls from server
+    if (data.walls) {
+        gameState.walls = new Set(data.walls);
+    }
 });
 
 socket.on('players', (playersList) => {
@@ -72,7 +79,8 @@ socket.on('players', (playersList) => {
         gameState.players.set(player.id, {
             x: player.x,
             y: player.y,
-            avatar: player.avatar
+            avatar: player.avatar,
+            kills: player.kills || 0
         });
     });
     updatePlayerCount();
@@ -82,7 +90,8 @@ socket.on('playerJoined', (player) => {
     gameState.players.set(player.id, {
         x: player.x,
         y: player.y,
-        avatar: player.avatar
+        avatar: player.avatar,
+        kills: player.kills || 0
     });
     updatePlayerCount();
 });
@@ -106,9 +115,11 @@ socket.on('playerRespawned', (player) => {
     }
 });
 
-socket.on('caught', (playerId) => {
+socket.on('caught', (data) => {
     // You caught someone
-    statusDiv.textContent = 'You caught someone!';
+    gameState.kills = data.kills || 0;
+    killsDiv.textContent = `Kills: ${gameState.kills}`;
+    statusDiv.textContent = `You caught someone! (${gameState.kills} kills)`;
     setTimeout(() => {
         if (gameState.alive) {
             statusDiv.textContent = 'Alive';
@@ -130,6 +141,13 @@ socket.on('respawn', (data) => {
     statusDiv.textContent = 'Alive';
     deathScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
+});
+
+socket.on('playerKilled', (data) => {
+    // Update kill count for the killer if we're tracking them
+    if (gameState.players.has(data.killerId)) {
+        gameState.players.get(data.killerId).kills = data.kills;
+    }
 });
 
 // Movement
@@ -174,7 +192,13 @@ window.addEventListener('keydown', (e) => {
                 break;
         }
         
-        // Only move if position changed
+        // Check if new position is a wall
+        const wallKey = `${newX},${newY}`;
+        if (gameState.walls.has(wallKey)) {
+            return; // Can't move into a wall
+        }
+        
+        // Only move if position changed and is not a wall
         if (newX !== gameState.myX || newY !== gameState.myY) {
             gameState.myX = newX;
             gameState.myY = newY;
@@ -252,6 +276,17 @@ function render() {
         ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
         ctx.strokeStyle = '#333';
         ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
+        
+        // Draw walls if visible
+        if (gameState.walls.has(blockKey)) {
+            ctx.fillStyle = '#444';
+            ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+            ctx.strokeStyle = '#666';
+            ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
+            // Add a subtle pattern to walls
+            ctx.fillStyle = '#555';
+            ctx.fillRect(x * blockSize + 2, y * blockSize + 2, blockSize - 4, blockSize - 4);
+        }
     });
     
     // Draw other players (only if visible)
@@ -286,6 +321,9 @@ function render() {
 function updatePlayerCount() {
     playerCountDiv.textContent = `Players: ${gameState.players.size + 1}`;
 }
+
+// Initialize kills display
+killsDiv.textContent = `Kills: ${gameState.kills}`;
 
 function gameLoop() {
     render();
