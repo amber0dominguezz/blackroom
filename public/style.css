@@ -58,7 +58,6 @@ body {
     border: 2px solid #333;
     cursor: pointer;
     transition: all 0.3s;
-    border-radius: 10px;
 }
 
 .avatar-option:hover {
